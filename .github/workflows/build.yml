@@ -15,6 +15,7 @@ jobs:
         with:
           submodules: "recursive"
           fetch-depth: 0
+
       - name: Generate version
         id: parse_version
         run: |
@@ -24,10 +25,12 @@ jobs:
           VERSION="$MAJOR.$MINOR.$PATCH"
           echo "Generated Version: $VERSION"
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Install Compiler
         run: |
           curl -o arm-gnu-toolchain-12.2.rel1-x86_64-aarch64-none-elf.tar.xz https://armkeil.blob.core.windows.net/developer/Files/downloads/gnu/12.2.rel1/binrel/arm-gnu-toolchain-12.2.rel1-x86_64-aarch64-none-elf.tar.xz
           tar -Jxf arm-gnu-toolchain-12.2.rel1-x86_64-aarch64-none-elf.tar.xz
+
       - name: Build kpimg
         run: |
           export TARGET_COMPILE=`pwd`/arm-gnu-toolchain-12.2.rel1-x86_64-aarch64-none-elf/bin/aarch64-none-elf-
@@ -45,8 +48,7 @@ jobs:
           mv kpimg.elf kpimg.elf-linux
           make clean
 
-          cd ..
-          cd kpms
+          cd .. && cd kpms
 
           cd demo-hello
           make
@@ -82,7 +84,6 @@ jobs:
           generateReleaseNotes: true
           allowUpdates: true
           replacesArtifacts: true
- 
 
   Release-user-lib:
     runs-on: ubuntu-latest
@@ -91,6 +92,7 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v4
+
       - name: Generate version
         id: parse_version
         run: |
@@ -103,10 +105,6 @@ jobs:
 
       - name: Zip-lib
         run: |
-          export TARGET_COMPILE=placeholder
-          cd kernel
-          make headers_install
-          cd ..
           zip -r kpuser.zip user
 
       - name: Release
@@ -118,7 +116,6 @@ jobs:
             kpuser.zip
           allowUpdates: true
           replacesArtifacts: true
- 
 
   Build-android-kptools:
     runs-on: ubuntu-latest
@@ -130,6 +127,7 @@ jobs:
         with:
           submodules: "recursive"
           fetch-depth: 0
+
       - name: Generate version
         id: parse_version
         run: |
@@ -147,17 +145,10 @@ jobs:
           ndk-version: r26b
           add-to-path: true
 
-      - name: make headers_install
-        run: |
-          export TARGET_COMPILE=placeholder
-          cd kernel
-          make headers_install
-
       - name: Build kptools-android
         run: |
           cd tools
           mkdir -p build/android && cd build/android
-          echo ${{ steps.setup-ndk.outputs.ndk-path }}
           cmake \
             -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
             -DCMAKE_BUILD_TYPE=Release \
@@ -175,7 +166,6 @@ jobs:
             tools/build/android/kptools-android
           allowUpdates: true
           replacesArtifacts: true
- 
 
   Build-kptools-linux:
     runs-on: ubuntu-latest
@@ -184,6 +174,7 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v4
+
       - name: Generate version
         id: parse_version
         run: |
@@ -194,13 +185,7 @@ jobs:
           echo "Generated Version: $VERSION"
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: make headers_install
-        run: |
-          export TARGET_COMPILE=placeholder
-          cd kernel
-          make headers_install
-
-      - name: Build kptools
+      - name: Build kptools-linux
         run: |
           export ANDROID=1
           cd tools
@@ -218,7 +203,7 @@ jobs:
             tools/build/kptools-linux
           allowUpdates: true
           replacesArtifacts: true
- 
+
   Build-kptools-windows-msys2:
     runs-on: windows-2022
     permissions:
@@ -226,6 +211,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
       - name: Generate version
         shell: pwsh
         run: |
@@ -236,6 +222,7 @@ jobs:
           Write-Output "Generated Version: $VERSION"
           "VERSION=$VERSION" | Out-File -FilePath $env:GITHUB_ENV -Append
           Add-Content -Path $env:GITHUB_OUTPUT -Value "VERSION=$VERSION"
+
       - uses: msys2/setup-msys2@v2
         with:
           update: true
@@ -245,6 +232,7 @@ jobs:
             msys/make
             msys/gcc
             msys/zlib-devel
+
       - name: Copyfile
         shell: pwsh
         run: |
@@ -252,15 +240,12 @@ jobs:
           cd tools
           (Get-Content -Path "Makefile") -replace '\$\(CC\)', " x86_64-pc-msys-gcc.exe" | Set-Content -Path "Makefile"
           (Get-Content -Path "Makefile") -replace '\${CC}', "x86_64-pc-msys-gcc.exe" | Set-Content -Path "Makefile"
+
       - name: build
         shell: cmd
         run: |
           cd tools
           msys2 -c 'make'
-      - name: Showinfo
-        shell: cmd
-        run: |
-          ls C:\a\_temp\
 
       - name: Copyfile2
         shell: pwsh
@@ -270,6 +255,7 @@ jobs:
           cp C:\a\_temp\msys64\usr\bin\msys-2.0.dll .\win
           cp C:\a\_temp\msys64\usr\bin\msys-z.dll .\win
           7z a kptools-msys2-win .\win 
+
       - name: Release
         uses: ncipollo/release-action@v1.12.0
         with:
@@ -287,6 +273,7 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v4
+
       - name: Generate version
         id: parse_version
         run: |
@@ -297,13 +284,7 @@ jobs:
           echo "Generated Version: $VERSION"
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: make headers_install
-        run: |
-          export TARGET_COMPILE=placeholder
-          cd kernel
-          make headers_install
-
-      - name: Build kptools
+      - name: Build kptools-mac
         run: |
           export ANDROID=1
           cd tools
@@ -311,6 +292,7 @@ jobs:
           cmake ..
           make
           mv kptools kptools-mac
+
       - name: Release
         uses: ncipollo/release-action@v1.14.0
         with:
@@ -320,4 +302,3 @@ jobs:
             tools/build/kptools-mac
           allowUpdates: true
           replacesArtifacts: true
- 
