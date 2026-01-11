@@ -32,6 +32,7 @@ jobs:
       # -------- Generate headers --------
       - name: Generate embedded headers
         run: |
+          mkdir -p include
           xxd -i res/kpimg.enc > include/kpimg_enc.h
           xxd -i res/kptools-linux > include/kptools_linux.h
           xxd -i res/kptools-android > include/kptools_android.h
