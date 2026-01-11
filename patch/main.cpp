@@ -29,7 +29,6 @@ void decrypt_kpimg(std::vector<uint8_t>& data) {
     for (auto& b : data) b ^= 0xAA;
 }
 
-
 int create_memfd(const std::vector<uint8_t>& data) {
     int fd = syscall(__NR_memfd_create, "kptools_memfd", 0);
     if (fd == -1) return -1;
@@ -43,14 +42,11 @@ int create_memfd(const std::vector<uint8_t>& data) {
     return fd;
 }
 
-
 void execute_in_memory(const std::vector<uint8_t>& data, const std::vector<std::string>& args) {
-
     int mem_fd = create_memfd(data);
     if (mem_fd == -1) {
         throw std::runtime_error("Unable to create memory file descriptor");
     }
-
 
     std::vector<char*> argv;
     argv.push_back(strdup("kptools_mem"));
@@ -59,14 +55,11 @@ void execute_in_memory(const std::vector<uint8_t>& data, const std::vector<std::
     }
     argv.push_back(nullptr);
 
-
     pid_t pid = fork();
     if (pid == 0) {
-
         fexecve(mem_fd, argv.data(), environ);
         _exit(EXIT_FAILURE);
     } else if (pid > 0) {
-
         int status;
         waitpid(pid, &status, 0);
     } else {
@@ -92,16 +85,15 @@ int main() try {
     check_file_exists("Image");
 
     #ifdef __aarch64__
-        std::vector<uint8_t> kptools_data(res_kptools_android, res_kptools_android + res_kptools_android_len);
+        std::vector<uint8_t> kptools_data(kptools_android, kptools_android + kptools_android_len);
     #else
-        std::vector<uint8_t> kptools_data(res_kptools_linux, res_kptools_linux + res_kptools_linux_len);
+        std::vector<uint8_t> kptools_data(kptools_linux, kptools_linux + kptools_linux_len);
     #endif
 
-    std::vector<uint8_t> kpimg_data(res_kpimg_enc, res_kpimg_enc + res_kpimg_enc_len);
+    std::vector<uint8_t> kpimg_data(kpimg_enc, kpimg_enc + kpimg_enc_len);
     decrypt_kpimg(kpimg_data);
     int kpimg_mem_fd = create_memfd(kpimg_data); 
     std::string kpimg_path = fd_to_path(kpimg_mem_fd); 
-
 
     std::vector<std::string> args = {
         "-p",
