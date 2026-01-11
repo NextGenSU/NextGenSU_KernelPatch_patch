@@ -53,17 +53,18 @@ jobs:
 
           cmake --build . -j$(nproc)
 
-      # -------- Build Linux --------
+      # ------------------ Build Linux ------------------
       - name: Build Linux binary
         run: |
           rm -rf build-linux
           mkdir build-linux
           cd build-linux
-          cmake ..
+
+          cmake ../patch
           make -j$(nproc)
           mv patch patch_linux
 
-      # -------- Upload artifacts --------
+      # ------------------ Upload artifacts ------------------
       - name: Upload Linux binary
         uses: actions/upload-artifact@v4
         with:
