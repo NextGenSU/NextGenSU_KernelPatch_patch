@@ -29,30 +29,6 @@ jobs:
           unzip android-ndk-r28-linux.zip
           echo "ANDROID_NDK=$PWD/android-ndk-r28" >> $GITHUB_ENV
 
-      # -------- Generate headers --------
-#      - name: Generate embedded headers
-#        run: |
-#          mkdir -p include
-#          xxd -i res/kpimg.enc > include/kpimg_enc.h
-#          xxd -i res/kptools-linux > include/kptools_linux.h
-#          xxd -i res/kptools-android > include/kptools_android.h
-
-      # -------- Build Android (arm64) --------
-      - name: Build Android arm64 binary
-        run: |
-          rm -rf build-android
-          mkdir build-android
-          cd build-android
-
-          cmake ../patch \
-            -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DANDROID_ABI=arm64-v8a \
-            -DANDROID_PLATFORM=android-31 \
-            -DANDROID_STL=c++_static
-
-          cmake --build . -j$(nproc)
-
       # ------------------ Build Linux ------------------
       - name: Build Linux binary
         run: |
