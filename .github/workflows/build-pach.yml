@@ -30,12 +30,12 @@ jobs:
           echo "ANDROID_NDK=$PWD/android-ndk-r28" >> $GITHUB_ENV
 
       # -------- Generate headers --------
-      - name: Generate embedded headers
-        run: |
-          mkdir -p include
-          xxd -i res/kpimg.enc > include/kpimg_enc.h
-          xxd -i res/kptools-linux > include/kptools_linux.h
-          xxd -i res/kptools-android > include/kptools_android.h
+#      - name: Generate embedded headers
+#        run: |
+#          mkdir -p include
+#          xxd -i res/kpimg.enc > include/kpimg_enc.h
+#          xxd -i res/kptools-linux > include/kptools_linux.h
+#          xxd -i res/kptools-android > include/kptools_android.h
 
       # -------- Build Android (arm64) --------
       - name: Build Android arm64 binary
