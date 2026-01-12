@@ -47,8 +47,11 @@ jobs:
           make
           mv kpimg kpimg-android
           mv kpimg.elf kpimg.elf-android
-          mv kpimg-android patch/res/kpimg  # Перемещаем файл kpimg в patch/res
           make clean
+
+      - name: List kernel directory after build
+        run: |
+          ls -alh kernel
 
           # Linux build
           unset ANDROID
