@@ -189,13 +189,16 @@ jobs:
       - name: Upload binaries to release
         uses: softprops/action-gh-release@v2
         with:
+          release_id: ${{ steps.create_release.outputs.id }}
           files: |
-              release/kpimg
-              release/kptools
-              release/kptools-linux
-              release/kptools-android
-              release/patch_linux
-              release/patch_android
+            release/kpimg
+            release/kptools
+            release/kptools-linux
+            release/kptools-android
+            release/patch_linux
+            release/patch_android
+          overwrite_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 
