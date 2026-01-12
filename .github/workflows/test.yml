@@ -68,7 +68,7 @@ jobs:
           cmake ..
           make
           mv kptools kptools-linux
-          cp tools/build/kptools-linux patch/res/kptools-linux
+          cp kptools-linux patch/res/kptools-linux
           cd ../..
 
       # -------- Setup Android NDK --------
@@ -91,7 +91,7 @@ jobs:
                 -DANDROID_PLATFORM=android-31 ../..
           cmake --build .
           mv kptools kptools-android
-          cp tools/build/kptools-android patch/res/kptools-android
+          cp kptools-android patch/res/kptools-android
           cd ../../../..
 
       - name: List tools/build directory after build
