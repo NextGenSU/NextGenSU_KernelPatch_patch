@@ -127,8 +127,8 @@ jobs:
           cp patch_android ../release/patch_android
           cd ..
 
-          - name: Prepare release folder
-            run: |
+      - name: Prepare release folder
+        run: |
           mkdir -p release
           # Переименовываем kpimg-android в kpimg и копируем в release
           cp kernel/kpimg-android release/kpimg
@@ -137,6 +137,7 @@ jobs:
           cp tools/build/android/kptools-android release/kptools-android
           cp build-linux/patch_linux release/patch_linux
           cp build-android/patch_android release/patch_android
+
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
