@@ -59,6 +59,39 @@ jobs:
 
           cd ..
 
+      # -------- Build kptools (Linux) --------
+      - name: Build kptools Linux
+        run: |
+          cd tools
+          rm -rf build
+          mkdir build && cd build
+          cmake ..
+          make
+          mv kptools kptools-linux
+          cd ../..
+
+      # -------- Setup Android NDK --------
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r28
+          add-to-path: true
+
+      # -------- Build kptools Android --------
+      - name: Build kptools Android
+        run: |
+          cd tools
+          rm -rf build/android
+          mkdir -p build/android && cd build/android
+          cmake -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DANDROID_ABI=arm64-v8a \
+                -DANDROID_PLATFORM=android-31 ../..
+          cmake --build .
+          mv kptools kptools-android
+          cd ../../../..
+
       - name: List kernel directory after build
         run: |
           ls -alh kernel
