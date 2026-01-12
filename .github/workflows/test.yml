@@ -49,10 +49,6 @@ jobs:
           mv kpimg.elf kpimg.elf-android
           make clean
 
-      - name: List kernel directory after build
-        run: |
-          ls -alh kernel
-
           # Linux build
           unset ANDROID
           make clean
@@ -62,6 +58,10 @@ jobs:
           make clean
 
           cd ..
+
+      - name: List kernel directory after build
+        run: |
+          ls -alh kernel
 
       - name: Check if kpimg exists
         run: |
