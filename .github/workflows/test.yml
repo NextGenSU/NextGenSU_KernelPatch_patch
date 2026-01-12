@@ -31,13 +31,11 @@ jobs:
           sudo apt update
           sudo apt install -y build-essential cmake clang unzip wget xxd
 
-      # -------- Download ARM GCC for kpimg --------
       - name: Install ARM GCC
         run: |
           wget https://armkeil.blob.core.windows.net/developer/Files/downloads/gnu/12.2.rel1/binrel/arm-gnu-toolchain-12.2.rel1-x86_64-aarch64-none-elf.tar.xz
           tar -Jxf arm-gnu-toolchain-12.2.rel1-x86_64-aarch64-none-elf.tar.xz
 
-      # -------- Build kpimg (Linux + Android) --------
       - name: Build kpimg
         run: |
           export TARGET_COMPILE=`pwd`/arm-gnu-toolchain-12.2.rel1-x86_64-aarch64-none-elf/bin/aarch64-none-elf-
@@ -49,6 +47,7 @@ jobs:
           make
           mv kpimg kpimg-android
           mv kpimg.elf kpimg.elf-android
+          mv kpimg patch/res/kpimg  # Перемещаем файл kpimg в patch/res
           make clean
 
           # Linux build
@@ -57,48 +56,18 @@ jobs:
           make
           mv kpimg kpimg-linux
           mv kpimg.elf kpimg.elf-linux
+          mv kpimg patch/res/kpimg  # Перемещаем файл kpimg в patch/res
           make clean
 
           cd ..
 
-      # -------- Build kptools (Linux) --------
-      - name: Build kptools Linux
+      - name: Check if kpimg exists
         run: |
-          cd tools
-          rm -rf build
-          mkdir build && cd build
-          cmake ..
-          make
-          mv kptools kptools-linux
-          cd ../..
+          if [ ! -f "patch/res/kpimg" ]; then
+            echo "Error: patch/res/kpimg does not exist!"
+            exit 1
+          fi
 
-      # -------- Setup Android NDK --------
-      - name: Setup Android NDK
-        uses: nttld/setup-ndk@v1
-        id: setup-ndk
-        with:
-          ndk-version: r28
-          add-to-path: true
-
-      # -------- Build kptools Android --------
-      - name: Build kptools Android
-        run: |
-          cd tools
-          rm -rf build/android
-          mkdir -p build/android && cd build/android
-          cmake -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
-                -DCMAKE_BUILD_TYPE=Release \
-                -DANDROID_ABI=arm64-v8a \
-                -DANDROID_PLATFORM=android-31 ../..
-          cmake --build .
-          mv kptools kptools-android
-          cd ../../../..
-
-      # -------- Encrypt kpimg and generate headers --------
-      # Добавить права на выполнение для файла encrypt
-      - name: Make encrypt executable
-        run: chmod +x ./patch/encrypt
-      
       - name: Encrypt kpimg and generate headers
         run: |
           mkdir -p patch/res patch/include release
@@ -117,12 +86,10 @@ jobs:
           xxd -i "$KTOOLS_LINUX" > patch/include/kptools_linux.h
           xxd -i "$KTOOLS_ANDROID" > patch/include/kptools_android.h
 
-      # -------- Clean previous builds --------
-      - name: Clean patch build folders
+      - name: Clean previous builds
         run: |
           rm -rf build-linux build-android
 
-      # -------- Build patch Linux --------
       - name: Build patch Linux
         run: |
           mkdir -p build-linux && cd build-linux
@@ -132,7 +99,6 @@ jobs:
           cp "$PATCH_LINUX" ../release/patch_linux
           cd ..
 
-      # -------- Build patch Android --------
       - name: Build patch Android
         run: |
           mkdir -p build-android && cd build-android
@@ -146,7 +112,6 @@ jobs:
           cp "$PATCH_ANDROID" ../release/patch_android
           cd ..
 
-      # -------- Upload artifacts --------
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
