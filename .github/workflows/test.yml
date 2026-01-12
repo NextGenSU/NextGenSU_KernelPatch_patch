@@ -91,7 +91,6 @@ jobs:
                 -DANDROID_PLATFORM=android-31 ../..
           cmake --build .
           mv kptools kptools-android
-          cp kptools-android patch/res/kptools-android
           cd ../../../..
 
       - name: List tools directory after build
