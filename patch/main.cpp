@@ -25,20 +25,21 @@
 
 namespace fs = std::filesystem;
 
+// Простейшая дешифровка kpimg
 void decrypt_kpimg(std::vector<uint8_t>& data) {
-    for (auto& b : data) b ^= 0xAA;  // Дешифровка с использованием XOR
+    for (auto& b : data) b ^= 0xAA;
 }
 
 int create_memfd(const std::vector<uint8_t>& data) {
-    int fd = syscall(__NR_memfd_create, "kptools_memfd", 0);  // Создание мемори-файла
+    int fd = syscall(__NR_memfd_create, "kptools_memfd", 0);
     if (fd == -1) return -1;
 
     if (write(fd, data.data(), data.size()) != static_cast<ssize_t>(data.size())) {
         close(fd);
         return -1;
     }
-    
-    lseek(fd, 0, SEEK_SET);  // Перемещаем указатель на начало
+
+    lseek(fd, 0, SEEK_SET);
     return fd;
 }
 
@@ -55,19 +56,19 @@ void execute_in_memory(const std::vector<uint8_t>& data, const std::vector<std::
     }
     argv.push_back(nullptr);
 
-    pid_t pid = fork();  // Создаем новый процесс
+    pid_t pid = fork();
     if (pid == 0) {
-        fexecve(mem_fd, argv.data(), environ);  // Выполняем программу из памяти
+        fexecve(mem_fd, argv.data(), environ);
         _exit(EXIT_FAILURE);
     } else if (pid > 0) {
         int status;
-        waitpid(pid, &status, 0);  // Ожидаем завершения процесса
+        waitpid(pid, &status, 0);
     } else {
         throw std::runtime_error("Fork failed");
     }
 
     close(mem_fd);
-    for (auto& arg : argv) free(arg);  // Освобождаем память
+    for (auto& arg : argv) free(arg);
 }
 
 void check_file_exists(const std::string& file_path) {
@@ -78,42 +79,37 @@ void check_file_exists(const std::string& file_path) {
 }
 
 std::string fd_to_path(int fd) {
-    return "/proc/self/fd/" + std::to_string(fd);  // Возвращаем путь к файлу, ассоциированному с дескриптором
+    return "/proc/self/fd/" + std::to_string(fd);
 }
 
 int main() try {
-    check_file_exists("Image");  // Проверяем, существует ли файл Image
+    check_file_exists("Image");
 
-    // Определяем какие данные использовать в зависимости от архитектуры
-    #ifdef __aarch64__
-        std::vector<uint8_t> kptools_data(res_kptools_android, res_kptools_android + res_kptools_android_len);
-    #else
-        std::vector<uint8_t> kptools_data(res_kptools_linux, res_kptools_linux + res_kptools_linux_len);
-    #endif
+    // Используем правильные имена из сгенерированных заголовков
+#ifdef __aarch64__
+    std::vector<uint8_t> kptools_data(patch_res_kptools_android, patch_res_kptools_android + patch_res_kptools_android_len);
+#else
+    std::vector<uint8_t> kptools_data(patch_res_kptools_linux, patch_res_kptools_linux + patch_res_kptools_linux_len);
+#endif
 
-    // Данные для образа
-    std::vector<uint8_t> kpimg_data(res_kpimg_enc, res_kpimg_enc + res_kpimg_enc_len);
-    
-    // Дешифруем образ
+    std::vector<uint8_t> kpimg_data(patch_res_kpimg_enc, patch_res_kpimg_enc + patch_res_kpimg_enc_len);
+
     decrypt_kpimg(kpimg_data);
-    
-    // Создаем мемори-файл для образа
-    int kpimg_mem_fd = create_memfd(kpimg_data); 
-    std::string kpimg_path = fd_to_path(kpimg_mem_fd);  // Получаем путь к этому файлу
 
-    // Аргументы для запуска kptools
+    int kpimg_mem_fd = create_memfd(kpimg_data);
+    std::string kpimg_path = fd_to_path(kpimg_mem_fd);
+
     std::vector<std::string> args = {
-        "-p",  // Параметр для kptools
-        "-s", "123",  // Еще один параметр
-        "-i", "Image",  // Входной файл
-        "-k", kpimg_path,  // Путь к образу
-        "-o", "oImage"  // Выходной файл
+        "-p",
+        "-s", "123",
+        "-i", "Image",
+        "-k", kpimg_path,
+        "-o", "oImage"
     };
 
-    // Выполняем kptools в памяти
     execute_in_memory(kptools_data, args);
 
-    close(kpimg_mem_fd);  // Закрываем дескриптор файла
+    close(kpimg_mem_fd);
     return 0;
 }
 catch (const std::exception& e) {
