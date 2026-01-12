@@ -62,7 +62,7 @@ jobs:
       - name: List kernel directory after build
         run: |
           ls -alh kernel
-
+          cp kpimg-android patch/res/kpimg  # Копируем файл kpimg-android в patch/res
       - name: Check if kpimg exists
         run: |
           if [ ! -f "patch/res/kpimg" ]; then
