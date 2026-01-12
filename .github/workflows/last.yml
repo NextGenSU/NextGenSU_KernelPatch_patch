@@ -1,4 +1,4 @@
-name: Last Build full patch (linux + android)
+name: Build full (linux + android)
 
 on:
   workflow_dispatch:
