@@ -127,13 +127,20 @@ jobs:
           cp patch_android ../release/patch_android
           cd ..
 
+          - name: Prepare release folder
+            run: |
+          mkdir -p release
+          # Переименовываем kpimg-android в kpimg и копируем в release
+          cp kernel/kpimg-android release/kpimg
+          # Копируем остальные бинарники
+          cp tools/build/kptools-linux release/kptools-linux
+          cp tools/build/android/kptools-android release/kptools-android
+          cp build-linux/patch_linux release/patch_linux
+          cp build-android/patch_android release/patch_android
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: release
-          path: |
-            kernel/kpimg-android
-            tools/build/kptools-linux
-            tools/build/android/kptools-android
-            release/patch_linux
-            release/patch_android
+          path: release/
+
