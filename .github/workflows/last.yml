@@ -132,7 +132,10 @@ jobs:
           mkdir -p release
           # Переименовываем kpimg-android в kpimg и копируем в release
           cp kernel/kpimg-android release/kpimg
+          # Переименовываем kptools-android в kptools и копируем в release
+          cp tools/build/android/kptools-android release/kptools
           # Копируем остальные бинарники
+          cp kernel/kpimg-linux release/kpimg-linux
           cp tools/build/kptools-linux release/kptools-linux
           cp tools/build/android/kptools-android release/kptools-android
           cp build-linux/patch release/patch_linux
