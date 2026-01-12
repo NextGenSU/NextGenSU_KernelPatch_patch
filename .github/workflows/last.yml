@@ -180,12 +180,11 @@ jobs:
       # -------- Create GitHub Release --------
       - name: Create GitHub Release
         id: create_release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.parse_version.outputs.VERSION }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
 
       - name: Upload binaries to release
         uses: softprops/action-gh-release@v2
