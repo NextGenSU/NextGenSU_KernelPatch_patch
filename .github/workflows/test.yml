@@ -95,6 +95,10 @@ jobs:
           cd ../../../..
 
       # -------- Encrypt kpimg and generate headers --------
+      # Добавить права на выполнение для файла encrypt
+      - name: Make encrypt executable
+        run: chmod +x ./patch/encrypt
+      
       - name: Encrypt kpimg and generate headers
         run: |
           mkdir -p patch/res patch/include release
