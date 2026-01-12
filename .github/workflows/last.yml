@@ -1,0 +1,139 @@
+name: Build full patch (linux + android)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-patch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Generate version
+        id: parse_version
+        run: |
+          MAJOR=$(grep '#define MAJOR' version | awk '{print $3}')
+          MINOR=$(grep '#define MINOR' version | awk '{print $3}')
+          PATCH=$(grep '#define PATCH' version | awk '{print $3}')
+          VERSION="$MAJOR.$MINOR.$PATCH"
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Generated version: $VERSION"
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential cmake clang unzip wget xxd
+
+      - name: Install ARM GCC
+        run: |
+          wget https://armkeil.blob.core.windows.net/developer/Files/downloads/gnu/12.2.rel1/binrel/arm-gnu-toolchain-12.2.rel1-x86_64-aarch64-none-elf.tar.xz
+          tar -Jxf arm-gnu-toolchain-12.2.rel1-x86_64-aarch64-none-elf.tar.xz
+
+      - name: Build kpimg
+        run: |
+          export TARGET_COMPILE=`pwd`/arm-gnu-toolchain-12.2.rel1-x86_64-aarch64-none-elf/bin/aarch64-none-elf-
+          cd kernel
+
+          # Android build
+          export ANDROID=1
+          make clean
+          make
+          mv kpimg kpimg-android
+          mv kpimg.elf kpimg.elf-android
+          make clean
+
+          # Linux build
+          unset ANDROID
+          make clean
+          make
+          mv kpimg kpimg-linux
+          mv kpimg.elf kpimg.elf-linux
+          make clean
+          cd ..
+
+      - name: Build kptools Linux
+        run: |
+          cd tools
+          rm -rf build
+          mkdir build && cd build
+          cmake ..
+          make
+          mv kptools kptools-linux
+          cd ../..
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r28
+          add-to-path: true
+
+      - name: Build kptools Android
+        run: |
+          cd tools
+          rm -rf build/android
+          mkdir -p build/android && cd build/android
+          cmake -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DANDROID_ABI=arm64-v8a \
+                -DANDROID_PLATFORM=android-31 ../..
+          cmake --build . -j$(nproc)
+          mv kptools kptools-android
+          cd ../../../..
+
+      - name: Prepare patch resources
+        run: |
+          mkdir -p patch/res patch/include release
+          cp kernel/kpimg-android patch/res/kpimg
+          cp tools/build/kptools-linux patch/res/kptools-linux
+          cp tools/build/android/kptools-android patch/res/kptools-android
+
+      - name: Encrypt kpimg and generate headers
+        run: |
+          chmod +x ./patch/encrypt
+          ./patch/encrypt patch/res/kpimg patch/res/kpimg.enc
+          xxd -i patch/res/kpimg.enc > patch/include/kpimg_enc.h
+          xxd -i patch/res/kptools-linux > patch/include/kptools_linux.h
+          xxd -i patch/res/kptools-android > patch/include/kptools_android.h
+
+      - name: Clean build directories
+        run: |
+          rm -rf build-linux build-android
+
+      - name: Build patch Linux
+        run: |
+          mkdir -p build-linux && cd build-linux
+          cmake ../patch
+          make -j$(nproc)
+          cp patch ../release/patch_linux
+          cd ..
+
+      - name: Build patch Android
+        run: |
+          mkdir -p build-android && cd build-android
+          cmake ../patch \
+            -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-31
+          cmake --build . -j$(nproc)
+          cp patch_android ../release/patch_android
+          cd ..
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release
+          path: |
+            kernel/kpimg-android
+            tools/build/kptools-linux
+            tools/build/android/kptools-android
+            release/patch_linux
+            release/patch_android
