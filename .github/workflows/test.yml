@@ -92,9 +92,9 @@ jobs:
           mv kptools kptools-android
           cd ../../../..
 
-      - name: List tools directory after build
+      - name: List tools/build directory after build
         run: |
-          ls -alh tools
+          ls -alh tools/build
 
       - name: List kernel directory after build
         run: |
