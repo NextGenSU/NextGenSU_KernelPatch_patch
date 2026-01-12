@@ -47,7 +47,7 @@ jobs:
           make
           mv kpimg kpimg-android
           mv kpimg.elf kpimg.elf-android
-          mv kpimg patch/res/kpimg  # Перемещаем файл kpimg в patch/res
+          mv kpimg-android patch/res/kpimg  # Перемещаем файл kpimg в patch/res
           make clean
 
           # Linux build
@@ -56,7 +56,6 @@ jobs:
           make
           mv kpimg kpimg-linux
           mv kpimg.elf kpimg.elf-linux
-          mv kpimg patch/res/kpimg  # Перемещаем файл kpimg в patch/res
           make clean
 
           cd ..
