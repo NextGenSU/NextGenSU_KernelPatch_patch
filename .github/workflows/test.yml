@@ -98,7 +98,7 @@ jobs:
       - name: Encrypt kpimg and generate headers
         run: |
           mkdir -p patch/res patch/include release
-          ./kernel/kpimg-linux patch/res/kpimg patch/res/kpimg.enc
+          ./encrypt patch/res/kpimg patch/res/kpimg.enc
           xxd -i patch/res/kpimg.enc > patch/include/kpimg_enc.h
 
           # Найти бинарники kptools (любое место)
