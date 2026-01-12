@@ -72,6 +72,7 @@ jobs:
 
       - name: Encrypt kpimg and generate headers
         run: |
+          chmod +x ./patch/encrypt
           mkdir -p patch/res patch/include release
           ./patch/encrypt patch/res/kpimg patch/res/kpimg.enc
           xxd -i patch/res/kpimg.enc > patch/include/kpimg_enc.h
