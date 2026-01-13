@@ -2,6 +2,10 @@ name: Полная (linux + android)
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Укажите версию (e.g., 1.2.3)'
+        required: false
 
 jobs:
   build-patch:
@@ -10,7 +14,7 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout source
+      - name: Клонирую исходники
         uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -19,10 +23,17 @@ jobs:
       - name: Generate version
         id: parse_version
         run: |
-          MAJOR=$(grep '#define MAJOR' version | awk '{print $3}')
-          MINOR=$(grep '#define MINOR' version | awk '{print $3}')
-          PATCH=$(grep '#define PATCH' version | awk '{print $3}')
-          VERSION="$MAJOR.$MINOR.$PATCH"
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            # Используем версию, переданную при запуске workflow
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            # Парсим версию из файла version
+            MAJOR=$(grep '#define MAJOR' version | awk '{print $3}')
+            MINOR=$(grep '#define MINOR' version | awk '{print $3}')
+            PATCH=$(grep '#define PATCH' version | awk '{print $3}')
+            VERSION="$MAJOR.$MINOR.$PATCH"
+          fi
+
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "Generated version: $VERSION"
 
