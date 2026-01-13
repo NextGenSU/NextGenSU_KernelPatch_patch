@@ -1,4 +1,4 @@
-name: Полная сборка (linux + android)
+name: Полная (linux + android)
 
 on:
   workflow_dispatch:
