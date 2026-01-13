@@ -1,0 +1,183 @@
+name: Полная (linux + android)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-patch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Generate version
+        id: parse_version
+        run: |
+          MAJOR=$(grep '#define MAJOR' version | awk '{print $3}')
+          MINOR=$(grep '#define MINOR' version | awk '{print $3}')
+          PATCH=$(grep '#define PATCH' version | awk '{print $3}')
+          VERSION="$MAJOR.$MINOR.$PATCH"
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Generated version: $VERSION"
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential cmake clang unzip wget xxd
+
+      - name: Install ARM GCC
+        run: |
+          wget https://armkeil.blob.core.windows.net/developer/Files/downloads/gnu/12.2.rel1/binrel/arm-gnu-toolchain-12.2.rel1-x86_64-aarch64-none-elf.tar.xz
+          tar -Jxf arm-gnu-toolchain-12.2.rel1-x86_64-aarch64-none-elf.tar.xz
+          export PATH="$PWD/arm-gnu-toolchain-12.2.rel1-x86_64-aarch64-none-elf/bin:$PATH"
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r28
+          add-to-path: true
+
+      - name: Build kpimg (Linux + Android)
+        run: |
+          cd kernel
+          for TARGET in android linux; do
+            if [ "$TARGET" = "android" ]; then
+              export ANDROID=1
+            else
+              unset ANDROID
+            fi
+            make clean
+            make
+            mv kpimg kpimg-$TARGET
+            mv kpimg.elf kpimg.elf-$TARGET
+          done
+          make clean
+          cd ..
+
+      - name: Build kptools (Linux + Android)
+        run: |
+          cd tools
+          for TARGET in linux android; do
+            rm -rf build${TARGET:+/$TARGET}
+            mkdir -p build${TARGET:+/$TARGET} && cd build${TARGET:+/$TARGET}
+            if [ "$TARGET" = "android" ]; then
+              cmake -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
+                    -DCMAKE_BUILD_TYPE=Release \
+                    -DANDROID_ABI=arm64-v8a \
+                    -DANDROID_PLATFORM=android-31 ../..
+            else
+              cmake ..
+            fi
+            cmake --build . -j$(nproc)
+            mv kptools kptools-$TARGET
+            cd ../..
+          done
+
+      - name: Prepare patch resources
+        run: |
+          mkdir -p patch/res patch/include release
+          cp kernel/kpimg-android patch/res/kpimg
+          cp tools/build/kptools-linux patch/res/kptools-linux
+          cp tools/build/android/kptools-android patch/res/kptools-android
+
+      - name: Encrypt kpimg and generate headers
+        run: |
+          chmod +x ./patch/encrypt
+          ./patch/encrypt patch/res/kpimg patch/res/kpimg.enc
+          xxd -i patch/res/kpimg.enc > patch/include/kpimg_enc.h
+          xxd -i patch/res/kptools-linux > patch/include/kptools_linux.h
+          xxd -i patch/res/kptools-android > patch/include/kptools_android.h
+
+      - name: Clean build directories
+        run: rm -rf build-linux build-android
+
+      - name: Build patch (Linux + Android)
+        run: |
+          for TARGET in linux android; do
+            mkdir -p build-$TARGET && cd build-$TARGET
+            if [ "$TARGET" = "android" ]; then
+              cmake ../patch \
+                -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DANDROID_ABI=arm64-v8a \
+                -DANDROID_PLATFORM=android-31
+            else
+              cmake ../patch
+            fi
+            cmake --build . -j$(nproc)
+            cp patch${TARGET:+_android} ../release/patch_$TARGET
+            cd ..
+          done
+
+      - name: Prepare release folder
+        run: |
+          mkdir -p release
+          cp kernel/kpimg-android release/kpimg
+          cp tools/build/android/kptools-android release/kptools
+          cp kernel/kpimg-android release/kpimg-android
+          cp kernel/kpimg-linux release/kpimg-linux
+          cp tools/build/kptools-linux release/kptools-linux
+          cp tools/build/android/kptools-android release/kptools-android
+          cp build-linux/patch release/patch_linux
+          cp build-android/patch_android release/patch_android
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          path: |
+            release/kpimg
+            release/kptools
+            release/kpimg-android
+            release/kpimg-linux
+            release/kptools-linux
+            release/kptools-android
+            release/patch_linux
+            release/patch_android
+
+      - name: Generate short changelog
+        id: changelog
+        shell: bash
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+          COMMIT_HASH=$(git log -1 --pretty=%h)
+          case "$COMMIT_MSG" in
+            feat:* ) TYPE="✨ Feature"; TITLE="${COMMIT_MSG#feat: }" ;;
+            fix:* ) TYPE="🐛 Fix"; TITLE="${COMMIT_MSG#fix: }" ;;
+            perf:* ) TYPE="⚡ Performance"; TITLE="${COMMIT_MSG#perf: }" ;;
+            refactor:* ) TYPE="♻️ Refactor"; TITLE="${COMMIT_MSG#refactor: }" ;;
+            docs:* ) TYPE="📚 Docs"; TITLE="${COMMIT_MSG#docs: }" ;;
+            build:* ) TYPE="🏗 Build"; TITLE="${COMMIT_MSG#build: }" ;;
+            ci:* ) TYPE="🤖 CI"; TITLE="${COMMIT_MSG#ci: }" ;;
+            * ) TYPE="🔧 Change"; TITLE="$COMMIT_MSG" ;;
+          esac
+          echo "CHANGELOG_CONTENT=${TYPE}: ${TITLE} (${COMMIT_HASH})" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release + upload binaries
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.parse_version.outputs.VERSION }}
+          name: v${{ steps.parse_version.outputs.VERSION }}
+          body: |
+            ## 🚀 Changelog
+
+            ${{ steps.changelog.outputs.CHANGELOG_CONTENT }}
+          files: |
+            release/kpimg
+            release/kptools
+            release/kpimg-android
+            release/kpimg-linux
+            release/kptools-linux
+            release/kptools-android
+            release/patch_linux
+            release/patch_android
+          generate_release_notes: false
+          overwrite_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
