@@ -20,7 +20,7 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
-      - name: Generate version
+      - name: Генерация версии
         id: parse_version
         run: |
           if [ -n "${{ github.event.inputs.version }}" ]; then
@@ -37,17 +37,17 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "Generated version: $VERSION"
 
-      - name: Install dependencies
+      - name: Установка зависимостей
         run: |
           sudo apt update
           sudo apt install -y build-essential cmake clang unzip wget xxd
 
-      - name: Install ARM GCC
+      - name: Установка компилятора ARM GCC
         run: |
           wget https://armkeil.blob.core.windows.net/developer/Files/downloads/gnu/12.2.rel1/binrel/arm-gnu-toolchain-12.2.rel1-x86_64-aarch64-none-elf.tar.xz
           tar -Jxf arm-gnu-toolchain-12.2.rel1-x86_64-aarch64-none-elf.tar.xz
 
-      - name: Build kpimg for Android and Linux
+      - name: Сборка kpimg для Android и Linux
         run: |
           cd kernel
           export TARGET_COMPILE="$PWD/../arm-gnu-toolchain-12.2.rel1-x86_64-aarch64-none-elf/bin/aarch64-none-elf-"
@@ -68,7 +68,7 @@ jobs:
           make clean
           cd ..
 
-      - name: Build kptools Linux
+      - name: Сборка kptools для Linux
         run: |
           cd tools
           rm -rf build
@@ -78,14 +78,14 @@ jobs:
           mv kptools kptools-linux
           cd ../..
 
-      - name: Setup Android NDK
+      - name: Установка Android NDK
         uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
           ndk-version: r28
           add-to-path: true
 
-      - name: Build kptools Android
+      - name: Сборка kptools для Android
         run: |
           cd tools
           rm -rf build/android
@@ -98,14 +98,14 @@ jobs:
           mv kptools kptools-android
           cd ../../../..
 
-      - name: Prepare patch resources
+      - name: Подготовка ресуров для патча
         run: |
           mkdir -p patch/res patch/include release
           cp kernel/kpimg-android patch/res/kpimg
           cp tools/build/kptools-linux patch/res/kptools-linux
           cp tools/build/android/kptools-android patch/res/kptools-android
 
-      - name: Encrypt kpimg and generate headers
+      - name: Зашифровать kpimg и сгенерировать заголовки
         run: |
           chmod +x ./patch/encrypt
           ./patch/encrypt patch/res/kpimg patch/res/kpimg.enc
@@ -113,11 +113,11 @@ jobs:
           xxd -i patch/res/kptools-linux > patch/include/kptools_linux.h
           xxd -i patch/res/kptools-android > patch/include/kptools_android.h
 
-      - name: Clean build directories
+      - name: Очистка каталогов сборки
         run: |
           rm -rf build-linux build-android
 
-      - name: Build patch Linux
+      - name: Сборка patch для Linux
         run: |
           mkdir -p build-linux && cd build-linux
           cmake ../patch
@@ -125,7 +125,7 @@ jobs:
           cp patch ../release/patch_linux
           cd ..
 
-      - name: Build patch Android
+      - name: Сборка patch для Android
         run: |
           mkdir -p build-android && cd build-android
           cmake ../patch \
@@ -137,7 +137,7 @@ jobs:
           cp patch_android ../release/patch_android
           cd ..
 
-      - name: Prepare release folder
+      - name: Подготовка папки релиза
         run: |
           mkdir -p release
           # Переименовываем android версии для удобства
@@ -151,7 +151,7 @@ jobs:
           cp build-linux/patch release/patch_linux
           cp build-android/patch_android release/patch_android
 
-      - name: Upload artifacts
+      - name: Выгрузка артефактов компиляции
         uses: actions/upload-artifact@v4
         with:
           path: |
@@ -164,43 +164,43 @@ jobs:
             release/patch_linux
             release/patch_android
 
-      - name: Generate short changelog
+      - name: Генерирую короткий список изменений
         id: changelog
         shell: bash
         run: |
           COMMIT_MSG=$(git log -1 --pretty=%s)
           COMMIT_HASH=$(git log -1 --pretty=%h)
 
-          TYPE="🔧 Change"
+          TYPE="🔧 Изменения"
           TITLE="$COMMIT_MSG"
 
           case "$COMMIT_MSG" in
             feat:* )
-              TYPE="✨ Feature"
+              TYPE="✨ Особенности"
               TITLE="${COMMIT_MSG#feat: }"
               ;;
             fix:* )
-              TYPE="🐛 Fix"
+              TYPE="🐛 Исправления"
               TITLE="${COMMIT_MSG#fix: }"
               ;;
             perf:* )
-              TYPE="⚡ Performance"
+              TYPE="⚡ Производительность"
               TITLE="${COMMIT_MSG#perf: }"
               ;;
             refactor:* )
-              TYPE="♻️ Refactor"
+              TYPE="♻️ Рефакторинг"
               TITLE="${COMMIT_MSG#refactor: }"
               ;;
             docs:* )
-              TYPE="📚 Docs"
+              TYPE="📚 Документы"
               TITLE="${COMMIT_MSG#docs: }"
               ;;
             build:* )
-              TYPE="🏗 Build"
+              TYPE="🏗 Сборка"
               TITLE="${COMMIT_MSG#build: }"
               ;;
             ci:* )
-              TYPE="🤖 CI"
+              TYPE="🤖 Код"
               TITLE="${COMMIT_MSG#ci: }"
               ;;
           esac
@@ -213,13 +213,13 @@ jobs:
           printf "%s\n" "$CHANGELOG" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Create GitHub Release + upload binaries
+      - name: Создаю релиз и загружаю бинарные файлы на GitHub
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.parse_version.outputs.VERSION }}
           name: v${{ steps.parse_version.outputs.VERSION }}
           body: |
-            ## 🚀 Changelog
+            ## 📝 Список изменений
 
             ${{ steps.changelog.outputs.CHANGELOG_CONTENT }}
 
