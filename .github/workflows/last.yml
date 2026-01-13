@@ -150,50 +150,16 @@ jobs:
           cp build-linux/patch release/patch_linux
           cp build-android/patch_android release/patch_android
 
-      - name: Upload kpimg
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: kpimg
-          path: release/kpimg
-
-      - name: Upload kptools
-        uses: actions/upload-artifact@v4
-        with:
-          name: kptools
-          path: release/kptools
-
-      - name: Upload kptools-linux
-        uses: actions/upload-artifact@v4
-        with:
-          name: kptools-linux
-          path: release/kptools-linux
-
-      - name: Upload kptools-android
-        uses: actions/upload-artifact@v4
-        with:
-          name: kptools-android
-          path: release/kptools-android
-
-      - name: Upload patch_linux
-        uses: actions/upload-artifact@v4
-        with:
-          name: patch_linux
-          path: release/patch_linux
-
-      - name: Upload patch_android
-        uses: actions/upload-artifact@v4
-        with:
-          name: patch_android
-          path: release/patch_android
-
-      # -------- Create GitHub Release --------
-      - name: Create GitHub Release
-        id: create_release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: v${{ steps.parse_version.outputs.VERSION }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          path: |
+            release/kpimg
+            release/kptools
+            release/kptools-linux
+            release/kptools-android
+            release/patch_linux
+            release/patch_android
 
       - name: Upload binaries to release
         uses: softprops/action-gh-release@v2
