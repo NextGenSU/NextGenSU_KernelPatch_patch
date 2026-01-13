@@ -166,6 +166,7 @@ jobs:
 
       - name: Generate changelog
         id: changelog
+        shell: bash
         run: |
           LAST_TAG=$(git tag --sort=-creatordate | head -n 1)
           echo "Last tag: $LAST_TAG"
@@ -176,9 +177,17 @@ jobs:
             git log "$LAST_TAG"..HEAD --pretty=format:"- %s (%h)" > CHANGELOG.md
           fi
       
-          echo "CHANGELOG_CONTENT<<__EOF__" >> "$GITHUB_OUTPUT"
-          sed 's/%/%25/g; s/\r/%0D/g; s/\n/%0A/g' CHANGELOG.md >> "$GITHUB_OUTPUT"
-          echo "__EOF__" >> "$GITHUB_OUTPUT"
+          # если changelog пуст — добавим заглушку
+          if [ ! -s CHANGELOG.md ]; then
+            echo "- Initial release" > CHANGELOG.md
+          fi
+      
+          {
+            echo "CHANGELOG_CONTENT<<__EOF__"
+            sed 's/%/%25/g; s/\r/%0D/g; s/\n/%0A/g' CHANGELOG.md
+            echo ""
+            echo "__EOF__"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release + upload binaries
         uses: softprops/action-gh-release@v2
