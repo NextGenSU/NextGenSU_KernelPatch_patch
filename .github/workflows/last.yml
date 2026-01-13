@@ -205,9 +205,11 @@ jobs:
               ;;
           esac
       
-          CHANGELOG="### 📝 Последнее изменение%0A${TYPE}: ${TITLE} (${COMMIT_HASH})"
-      
-          echo "CHANGELOG_CONTENT=$CHANGELOG" >> "$GITHUB_OUTPUT"
+          # Используем многострочный вывод для GitHub Actions
+          echo "CHANGELOG_CONTENT<<EOF" >> $GITHUB_OUTPUT
+          echo "### 📝 Последнее изменение"
+          echo "${TYPE}: ${TITLE} (${COMMIT_HASH})"
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release + upload binaries
         uses: softprops/action-gh-release@v2
