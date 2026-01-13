@@ -9,6 +9,7 @@ on:
 
 jobs:
   build-patch:
+    name: Сборка бинарных файлов и патчей
     runs-on: ubuntu-latest
     permissions:
       contents: write
