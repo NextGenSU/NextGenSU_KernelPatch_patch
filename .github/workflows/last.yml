@@ -164,30 +164,50 @@ jobs:
             release/patch_linux
             release/patch_android
 
-      - name: Generate changelog
+      - name: Generate short changelog
         id: changelog
         shell: bash
         run: |
-          LAST_TAG=$(git tag --sort=-creatordate | head -n 1)
-          echo "Last tag: $LAST_TAG"
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+          COMMIT_HASH=$(git log -1 --pretty=%h)
       
-          if [ -z "$LAST_TAG" ]; then
-            git log --pretty=format:"- %s (%h)" > CHANGELOG.md
-          else
-            git log "$LAST_TAG"..HEAD --pretty=format:"- %s (%h)" > CHANGELOG.md
-          fi
+          TYPE="🔧 Change"
+          TITLE="$COMMIT_MSG"
       
-          # если changelog пуст — добавим заглушку
-          if [ ! -s CHANGELOG.md ]; then
-            echo "- Initial release" > CHANGELOG.md
-          fi
+          case "$COMMIT_MSG" in
+            feat:* )
+              TYPE="✨ Feature"
+              TITLE="${COMMIT_MSG#feat: }"
+              ;;
+            fix:* )
+              TYPE="🐛 Fix"
+              TITLE="${COMMIT_MSG#fix: }"
+              ;;
+            perf:* )
+              TYPE="⚡ Performance"
+              TITLE="${COMMIT_MSG#perf: }"
+              ;;
+            refactor:* )
+              TYPE="♻️ Refactor"
+              TITLE="${COMMIT_MSG#refactor: }"
+              ;;
+            docs:* )
+              TYPE="📚 Docs"
+              TITLE="${COMMIT_MSG#docs: }"
+              ;;
+            build:* )
+              TYPE="🏗 Build"
+              TITLE="${COMMIT_MSG#build: }"
+              ;;
+            ci:* )
+              TYPE="🤖 CI"
+              TITLE="${COMMIT_MSG#ci: }"
+              ;;
+          esac
       
-          {
-            echo "CHANGELOG_CONTENT<<__EOF__"
-            sed 's/%/%25/g; s/\r/%0D/g; s/\n/%0A/g' CHANGELOG.md
-            echo ""
-            echo "__EOF__"
-          } >> "$GITHUB_OUTPUT"
+          CHANGELOG="### 📝 Последнее изменение%0A${TYPE}: ${TITLE} (${COMMIT_HASH})"
+      
+          echo "CHANGELOG_CONTENT=$CHANGELOG" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release + upload binaries
         uses: softprops/action-gh-release@v2
