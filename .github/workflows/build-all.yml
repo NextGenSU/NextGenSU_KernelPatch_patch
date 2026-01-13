@@ -9,7 +9,7 @@ on:
 
 jobs:
   build-patch:
-    name: Сборка бинарных файлов и патчей
+    name: Сборка файлов
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -187,7 +187,7 @@ jobs:
           tag_name: v${{ steps.parse_version.outputs.VERSION }}
           name: v${{ steps.parse_version.outputs.VERSION }}
           body: |
-            ## Список изменений
+            ## 📝 Список изменений
             ${{ steps.changelog.outputs.CHANGELOG_CONTENT }}
           files: |
             release/kpimg
