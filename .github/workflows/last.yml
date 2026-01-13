@@ -91,11 +91,12 @@ jobs:
       - name: Prepare patch resources
         run: |
           mkdir -p patch/res patch/include release
-          cp kernel/kpimg-android patch/res/kpimg
+          cp kernel/kpimg-linux patch/res/kpimg
+          cp kernel/kpimg-android patch/res/kpimg-android
           cp tools/build/kptools-linux patch/res/kptools-linux
           cp tools/build/android/kptools-android patch/res/kptools-android
 
-      - name: Encrypt kpimg and generate headers
+      - name: Encrypt kpimg and generate headers linux
         run: |
           chmod +x ./patch/encrypt
           ./patch/encrypt patch/res/kpimg patch/res/kpimg.enc
@@ -114,6 +115,14 @@ jobs:
           make -j$(nproc)
           cp patch ../release/patch_linux
           cd ..
+
+      - name: Encrypt kpimg and generate headers for android
+        run: |
+          chmod +x ./patch/encrypt
+          ./patch/encrypt patch/res/kpimg-android patch/res/kpimg.enc
+          xxd -i patch/res/kpimg.enc > patch/include/kpimg_enc.h
+          xxd -i patch/res/kptools-linux > patch/include/kptools_linux.h
+          xxd -i patch/res/kptools-android > patch/include/kptools_android.h
 
       - name: Build patch Android
         run: |
