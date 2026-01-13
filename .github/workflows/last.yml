@@ -115,15 +115,6 @@ jobs:
           cp patch ../release/patch_linux
           cd ..
 
-#      - name: Encrypt kpimg and generate headers for android
-#        run: |
-#          cp kernel/kpimg-android patch/res/kpimg
-#          chmod +x ./patch/encrypt
-#          ./patch/encrypt patch/res/kpimg patch/res/kpimg.enc
-#          xxd -i patch/res/kpimg.enc > patch/include/kpimg_enc.h
-#          xxd -i patch/res/kptools-linux > patch/include/kptools_linux.h
-#          xxd -i patch/res/kptools-android > patch/include/kptools_android.h
-
       - name: Build patch Android
         run: |
           mkdir -p build-android && cd build-android
@@ -139,11 +130,8 @@ jobs:
       - name: Prepare release folder
         run: |
           mkdir -p release
-          # Переименовываем kpimg-android в kpimg и копируем в release
           cp kernel/kpimg-android release/kpimg
-          # Переименовываем kptools-android в kptools и копируем в release
           cp tools/build/android/kptools-android release/kptools
-          # Копируем остальные бинарники
           cp kernel/kpimg-android release/kpimg-android
           cp kernel/kpimg-linux release/kpimg-linux
           cp tools/build/kptools-linux release/kptools-linux
@@ -170,10 +158,10 @@ jobs:
         run: |
           COMMIT_MSG=$(git log -1 --pretty=%s)
           COMMIT_HASH=$(git log -1 --pretty=%h)
-      
+
           TYPE="🔧 Change"
           TITLE="$COMMIT_MSG"
-      
+
           case "$COMMIT_MSG" in
             feat:* )
               TYPE="✨ Feature"
@@ -204,12 +192,12 @@ jobs:
               TITLE="${COMMIT_MSG#ci: }"
               ;;
           esac
-      
-          # Используем многострочный вывод для GitHub Actions
-          echo "CHANGELOG_CONTENT<<EOF" >> $GITHUB_OUTPUT
-          echo "### 📝 Последнее изменение"
-          echo "${TYPE}: ${TITLE} (${COMMIT_HASH})"
-          echo "EOF" >> $GITHUB_OUTPUT
+
+          CHANGELOG=$(printf "### 📝 Последнее изменение\n%s: %s (%s)" "$TYPE" "$TITLE" "$COMMIT_HASH")
+
+          echo "CHANGELOG_CONTENT<<EOF" >> "$GITHUB_OUTPUT"
+          printf "%s\n" "$CHANGELOG" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release + upload binaries
         uses: softprops/action-gh-release@v2
