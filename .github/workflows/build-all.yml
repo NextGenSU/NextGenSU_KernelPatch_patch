@@ -1,10 +1,10 @@
-name: Полная (linux + android)
+name: Полная (Linux + Android)
 
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Укажите версию (e.g., 1.2.3)'
+        description: 'Укажите версию (например, 1.2.3)'
         required: false
 
 jobs:
@@ -15,7 +15,7 @@ jobs:
       contents: write
 
     steps:
-      - name: Клонирую исходники
+      - name: Клонирование исходников
         uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -25,16 +25,13 @@ jobs:
         id: parse_version
         run: |
           if [ -n "${{ github.event.inputs.version }}" ]; then
-            # Используем версию, переданную при запуске workflow
             VERSION="${{ github.event.inputs.version }}"
           else
-            # Парсим версию из файла version
             MAJOR=$(grep '#define MAJOR' version | awk '{print $3}')
             MINOR=$(grep '#define MINOR' version | awk '{print $3}')
             PATCH=$(grep '#define PATCH' version | awk '{print $3}')
             VERSION="$MAJOR.$MINOR.$PATCH"
           fi
-
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "Generated version: $VERSION"
 
@@ -43,33 +40,30 @@ jobs:
           sudo apt update
           sudo apt install -y build-essential cmake clang unzip wget xxd
 
-      - name: Установка компилятора ARM GCC
+      - name: Установка ARM GCC
         run: |
           wget https://armkeil.blob.core.windows.net/developer/Files/downloads/gnu/12.2.rel1/binrel/arm-gnu-toolchain-12.2.rel1-x86_64-aarch64-none-elf.tar.xz
           tar -Jxf arm-gnu-toolchain-12.2.rel1-x86_64-aarch64-none-elf.tar.xz
 
-      - name: Сборка kpimg для Android и Linux
+      - name: Сборка kpimg (Android + Linux)
         run: |
           cd kernel
           export TARGET_COMPILE="$PWD/../arm-gnu-toolchain-12.2.rel1-x86_64-aarch64-none-elf/bin/aarch64-none-elf-"
-
           for TARGET in android linux; do
             if [ "$TARGET" = "android" ]; then
               export ANDROID=1
             else
               unset ANDROID
             fi
-
             make clean
             make
             mv kpimg kpimg-$TARGET
             mv kpimg.elf kpimg.elf-$TARGET
           done
-
           make clean
           cd ..
 
-      - name: Сборка kptools для Linux
+      - name: Сборка kptools (Linux)
         run: |
           cd tools
           rm -rf build
@@ -86,7 +80,7 @@ jobs:
           ndk-version: r28
           add-to-path: true
 
-      - name: Сборка kptools для Android
+      - name: Сборка kptools (Android)
         run: |
           cd tools
           rm -rf build/android
@@ -99,14 +93,14 @@ jobs:
           mv kptools kptools-android
           cd ../../../..
 
-      - name: Подготовка ресуров для патча
+      - name: Подготовка ресурсов для патча
         run: |
           mkdir -p patch/res patch/include release
           cp kernel/kpimg-android patch/res/kpimg
           cp tools/build/kptools-linux patch/res/kptools-linux
           cp tools/build/android/kptools-android patch/res/kptools-android
 
-      - name: Зашифровать kpimg и сгенерировать заголовки
+      - name: Шифрование kpimg и генерация заголовков
         run: |
           chmod +x ./patch/encrypt
           ./patch/encrypt patch/res/kpimg patch/res/kpimg.enc
@@ -114,11 +108,10 @@ jobs:
           xxd -i patch/res/kptools-linux > patch/include/kptools_linux.h
           xxd -i patch/res/kptools-android > patch/include/kptools_android.h
 
-      - name: Очистка каталогов сборки
-        run: |
-          rm -rf build-linux build-android
+      - name: Очистка временных сборок
+        run: rm -rf build-linux build-android
 
-      - name: Сборка patch для Linux
+      - name: Сборка patch (Linux)
         run: |
           mkdir -p build-linux && cd build-linux
           cmake ../patch
@@ -126,7 +119,7 @@ jobs:
           cp patch ../release/patch_linux
           cd ..
 
-      - name: Сборка patch для Android
+      - name: Сборка patch (Android)
         run: |
           mkdir -p build-android && cd build-android
           cmake ../patch \
@@ -138,13 +131,11 @@ jobs:
           cp patch_android ../release/patch_android
           cd ..
 
-      - name: Подготовка папки релиза
+      - name: Подготовка релиза
         run: |
           mkdir -p release
-          # Переименовываем android версии для удобства
           cp kernel/kpimg-android release/kpimg
           cp tools/build/android/kptools-android release/kptools
-          # Копируем все бинарники в release
           cp kernel/kpimg-android release/kpimg-android
           cp kernel/kpimg-linux release/kpimg-linux
           cp tools/build/kptools-linux release/kptools-linux
@@ -152,7 +143,7 @@ jobs:
           cp build-linux/patch release/patch_linux
           cp build-android/patch_android release/patch_android
 
-      - name: Выгрузка артефактов компиляции
+      - name: Выгрузка артефактов
         uses: actions/upload-artifact@v4
         with:
           path: |
@@ -165,7 +156,7 @@ jobs:
             release/patch_linux
             release/patch_android
 
-      - name: Генерирую короткий список изменений
+      - name: Генерация changelog
         id: changelog
         shell: bash
         run: |
@@ -176,54 +167,28 @@ jobs:
           TITLE="$COMMIT_MSG"
 
           case "$COMMIT_MSG" in
-            feat:* )
-              TYPE="✨ Особенности"
-              TITLE="${COMMIT_MSG#feat: }"
-              ;;
-            fix:* )
-              TYPE="🐛 Исправления"
-              TITLE="${COMMIT_MSG#fix: }"
-              ;;
-            perf:* )
-              TYPE="⚡ Производительность"
-              TITLE="${COMMIT_MSG#perf: }"
-              ;;
-            refactor:* )
-              TYPE="♻️ Рефакторинг"
-              TITLE="${COMMIT_MSG#refactor: }"
-              ;;
-            docs:* )
-              TYPE="📚 Документы"
-              TITLE="${COMMIT_MSG#docs: }"
-              ;;
-            build:* )
-              TYPE="🏗 Сборка"
-              TITLE="${COMMIT_MSG#build: }"
-              ;;
-            ci:* )
-              TYPE="🤖 Код"
-              TITLE="${COMMIT_MSG#ci: }"
-              ;;
+            feat:* ) TYPE="✨ Особенности"; TITLE="${COMMIT_MSG#feat: }";;
+            fix:* ) TYPE="🐛 Исправления"; TITLE="${COMMIT_MSG#fix: }";;
+            perf:* ) TYPE="⚡ Производительность"; TITLE="${COMMIT_MSG#perf: }";;
+            refactor:* ) TYPE="♻️ Рефакторинг"; TITLE="${COMMIT_MSG#refactor: }";;
+            docs:* ) TYPE="📚 Документы"; TITLE="${COMMIT_MSG#docs: }";;
+            build:* ) TYPE="🏗 Сборка"; TITLE="${COMMIT_MSG#build: }";;
+            ci:* ) TYPE="🤖 Код"; TITLE="${COMMIT_MSG#ci: }";;
           esac
 
-          # Формируем безопасный changelog
           CHANGELOG=$(printf "%s: %s (%s)" "$TYPE" "$TITLE" "$COMMIT_HASH")
-
-          # Многострочный output
           echo "CHANGELOG_CONTENT<<EOF" >> $GITHUB_OUTPUT
           printf "%s\n" "$CHANGELOG" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Создаю релиз и загружаю бинарные файлы на GitHub
+      - name: Создание релиза + загрузка бинарников
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.parse_version.outputs.VERSION }}
           name: v${{ steps.parse_version.outputs.VERSION }}
           body: |
-            ## 📝 Список изменений
-
+            ## Список изменений
             ${{ steps.changelog.outputs.CHANGELOG_CONTENT }}
-
           files: |
             release/kpimg
             release/kptools
