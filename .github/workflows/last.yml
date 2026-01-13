@@ -159,7 +159,7 @@ jobs:
           COMMIT_MSG=$(git log -1 --pretty=%s)
           COMMIT_HASH=$(git log -1 --pretty=%h)
 
-          TYPE="🔧 Change"
+          TYPE="🔧 Изменения"
           TITLE="$COMMIT_MSG"
 
           case "$COMMIT_MSG" in
@@ -193,7 +193,7 @@ jobs:
               ;;
           esac
 
-          CHANGELOG=$(printf "### 📝 Последнее изменение\n%s: %s (%s)" "$TYPE" "$TITLE" "$COMMIT_HASH")
+          CHANGELOG=$(printf "%s: %s (%s)" "$TYPE" "$TITLE" "$COMMIT_HASH")
 
           echo "CHANGELOG_CONTENT<<EOF" >> "$GITHUB_OUTPUT"
           printf "%s\n" "$CHANGELOG" >> "$GITHUB_OUTPUT"
@@ -205,7 +205,7 @@ jobs:
           tag_name: v${{ steps.parse_version.outputs.VERSION }}
           name: v${{ steps.parse_version.outputs.VERSION }}
           body: |
-            ## 🚀 Changelog
+            ## 📝 Список изменений
 
             ${{ steps.changelog.outputs.CHANGELOG_CONTENT }}
 
